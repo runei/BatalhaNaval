@@ -14,6 +14,7 @@
 	STR_DESTROYER DB "Destroyer$"
 	STR_PATRULHA DB "Barco Patrulha$"
 	STR_DIGITE_POSICAO DB "Digite a posicao do $"
+	STR_DIGITE_NOVAMENTE DB "Digite novamente$"
 	
 	SIMB_PORTAAVIOES EQU 'A'
 	SIMB_NAVIOGUERRA EQU 'B'
@@ -261,32 +262,119 @@
 		RET
 	ENDP
 	
+    VER_POS_VALIDA PROC                     ; recebe DL, direcao, CX, tamanho do barco e AX, posicao 
+    										; retorna em AX, 1 valido e 0, invalido
+    	PUSH DX
+    	PUSH CX	 
+    	PUSH BX
+    
+    	XOR DH, DH
+    	MOV DH, 10
+    	
+    	PUSH AX ; salva posicao original
+    
+    	DIV DH ; AL , linha, AH , coluna
+    	
+    	MOV BX, AX ; BL , linha, BH, coluna
+    	
+    	DEC CX
+    	
+    	CMP DL, CHR_HORIZONTAL
+    	JZ VER_POS_HOR
+    	; vertical , soma tamanho - 1 * 10 na posicao
+    	; tem que ser menor que 90 + coluna
+    	XOR AX, AX
+    	MOV AX, CX
+    	MUL DH
+    	MOV CX, AX
+    	POP AX ; recupera posicao original
+    	ADD AX, CX 
+    	MOV BL, BH
+    	XOR BH, BH
+    	ADD BL, 90
+    	CMP AX, BX
+    	JLE POSICAO_VALIDA
+    	JMP POSICAO_INVALIDA
+    	
+    	VER_POS_HOR:
+    	; horizontal , soma tamanho - 1 na posicao 
+    	; tem que ser menor que linha * 10 + 9
+    	
+    	XOR AX, AX
+    	XOR BH, BH
+    	MOV AX, BX
+    	MUL DH
+    	ADD AX, 9
+    	MOV BX, AX
+    	
+    	POP AX ; recupera posicao original
+    	ADD AX, CX
+    	
+    	CMP AX, BX
+    	
+    	JLE POSICAO_VALIDA
+    	JMP POSICAO_INVALIDA
+    	
+    	POSICAO_VALIDA:
+    	MOV AX, 1
+    	JMP FIM_VER_POSICAO
+    	
+    	POSICAO_INVALIDA:
+    	MOV AX, 0    
+    	
+    	FIM_VER_POSICAO:
+    		
+    	POP BX
+    	POP CX
+    	POP DX    
+    	
+    	RET
+    ENDP
+	
 	COLOCA_BARCO PROC						; coloca um barco na matriz, em CX o tamanho e BX o offset da string para mensagem
 		PUSH DX
 		PUSH AX
 		PUSH BX
-		
-		MOV DX, OFFSET STR_DIGITE_POSICAO	; imprime a mensagem
+	    PUSH CX
+	    
+	    MOV DX, OFFSET STR_DIGITE_POSICAO	; imprime a mensagem
 		CALL PRINTFS
 		MOV DX, BX
 		CALL PRINTFS
 		MOV DL, ':'
 		CALL ESC_CHAR
 		CALL NOVALINHA
+		
+		LACO_LER_BARCO:	
+		
 		CALL GET_POSICAO_INI_BARCO			; o usuario digita a posicao do barco		
 		MOV BX, OFFSET MATRIZ_JOGADOR		; pega o offset da matriz
 		ADD BX, AX							; e adiciona a posicao digitada
 		CALL LER_DIRECAO_BARCO				; le a direcao do barco (somente H ou V)
+		
+		CALL VER_POS_VALIDA                 ; recebe DL, direcao, CX, tamanho barco e AX, posicao
+		                                    ; retorna em AX, 1 valido, 0 invalido
+		CMP AX, 1
+		JZ  CONT_COLOCA_BARCO
+		
+		CALL NOVALINHA
+		MOV DX, OFFSET STR_DIGITE_NOVAMENTE
+		CALL PRINTFS
+		CALL NOVALINHA
+		JMP LACO_LER_BARCO
+		
+		
+		CONT_COLOCA_BARCO:
 		CMP DL, CHR_HORIZONTAL
 		JZ CB_HOR
-		CALL COLOCA_BARCO_VERT
+	    CALL COLOCA_BARCO_VERT
 		JMP CB_FIM
 		CB_HOR:
-			CALL COLOCA_BARCO_HOR
-		
-		CB_FIM:
+	    	CALL COLOCA_BARCO_HOR
+	    CB_FIM:
 			CALL NOVALINHA
 		
+		POP CX
 		POP BX
 		POP AX
 		POP DX
@@ -339,4 +427,4 @@
 		MOV AH, 04CH
 		INT 21H		
              
-end INICIO
+end INICIO 
