@@ -33,11 +33,14 @@
 	TAM_MATRIZ EQU 10
 	TAM_VET_NAVIOS EQU 5
 	
+	DIST_MATRIZ_COR EQU 100
+	
 	VET_STR_BARCOS DB OFFSET STR_PORTAAVIOES, OFFSET STR_NAVIOGUERRA, OFFSET STR_SUBMARINO, OFFSET STR_DESTROYER, OFFSET STR_PATRULHA
 	VET_SIMB_BARCOS DB SIMB_PORTAAVIOES, SIMB_NAVIOGUERRA, SIMB_SUBMARINO, SIMB_DESTROYER, SIMB_PATRULHA
 	VET_TAM_BARCOS DB TAM_PORTAAVIOES, TAM_NAVIOGUERRA, TAM_SUBMARINO, TAM_DESTROYER, TAM_PATRULHA
 	
 	MATRIZ_JOGADOR DB 100 DUP (' ')
+	MATRIZ_JOGADOR_COR DB 100 DUP (00H) ; 02H = verde
 	MATRIZ_TIROS DB 100 DUP (254)
 	MATRIZ_TIROS_COR DB 100 DUP (02H) ; 02H = verde
 	
@@ -171,7 +174,7 @@
 		MOV AH, 09H				; tipo da int pra printa o char, mas ele não move o cursor
 		MOV AL, DL				; AL = char
 		
-		ADD BX, 100				; +100 pq 100 é o tamanho da matriz
+		ADD BX, DIST_MATRIZ_COR	; 100 é a distancia para a matriz de cores
 		MOV DX, [BX]			; isso é um mero gambito
 		
 		MOV BH, 00H				; BH = page number
@@ -272,6 +275,9 @@
 		
 		CBH_LOOP1:
 			MOV [BX], Dl
+			ADD BX, DIST_MATRIZ_COR		; coloca a cor do caractere
+			MOV [BX], 07H				; 07H = cinza
+			SUB BX, DIST_MATRIZ_COR
 			INC BX
 			LOOP CBH_LOOP1
 			
@@ -303,6 +309,9 @@
 		
 		CBV_LOOP1:
 			MOV [BX], DL
+			ADD BX, DIST_MATRIZ_COR		; coloca a cor do caractere
+			MOV [BX], 07H				; 07H = cinza
+			SUB BX, DIST_MATRIZ_COR
 			ADD BX, TAM_MATRIZ
 			LOOP CBV_LOOP1
 		
