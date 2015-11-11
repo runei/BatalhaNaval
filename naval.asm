@@ -144,7 +144,11 @@
 	ENDP
 	
 	PRINT_PRIMEIRA_LINHA_MATRIZ PROC	; imprime os numero de 0 e 9 como primeira linha da matriz
-		PUSH AX
+		PUSH AX							; AX = pos cursor
+		PUSH DX
+		
+		MOV DX, AX
+		CALL SET_CURSOR
 		
 		CALL PRINTESPACO  
 		CALL PRINTESPACO
@@ -158,9 +162,39 @@
 			INC AX
 			CMP AX, TAM_MATRIZ
 			JNZ PPLM_LOOP
+			
+		POP DX
+		POP AX
 		
-		CALL NOVALINHA
+		INC AH						; incrementa linha(enter)
 		
+		RET
+	ENDP
+	
+	SET_CURSOR PROC		;coloca o cursor na posicao DH = linha, DL = coluna
+		PUSH AX
+		PUSH BX
+		
+		MOV AH, 02H
+		MOV BH, 00H		; numero da pagina
+		INT 10H
+		
+		POP BX
+		POP AX
+		RET
+	ENDP
+	
+	GET_CURSOR PROC		; retorna a posicao do cursor DH = linha, DL = coluna
+		PUSH AX
+		PUSH BX
+		PUSH CX
+		
+		MOV AH, 03H
+		MOV BH, 00H		; numero da pagina
+		INT 10H
+		
+		POP CX
+		POP BX
 		POP AX
 		RET
 	ENDP
@@ -178,17 +212,15 @@
 		MOV DX, [BX]			; isso é um mero gambito
 		
 		MOV BH, 00H				; BH = page number
-		MOV BL, DL				; BL = cor - hoje imprime sempre verde
+		MOV BL, DL				; BL = cor 
 		MOV CX, 01H				; CL = qtde de char que vai imprimir
 		INT 10H
 		
-		MOV AH, 03				; pega a posicao do cursor DH = linha, DL = coluna
-		INT 10H
+		CALL GET_CURSOR
 		
 		INC DL					; incrementa a coluna do cursor
 		
-		MOV AH, 02H				; seta o cursor para a proxima posicao
-		INT 10H
+		CALL SET_CURSOR
 		
 		POP DX
 		POP CX
@@ -198,7 +230,7 @@
 	ENDP
 	
 	PRINT_MATRIZ PROC						; imprime uma matariz com offset em BX
-		PUSH AX
+		PUSH AX								; AX = pos cursor
 		PUSH BX
 		PUSH CX
 		PUSH DX
@@ -209,6 +241,9 @@
 		XOR DX, DX
 		
 		PM_LOOP1:
+			MOV DX, AX
+			CALL SET_CURSOR
+			PUSH AX
 			CALL PRINTESPACO
 			MOV AX, CX						; CX conta as linhas
 			CALL ESC_UINT16      
@@ -221,9 +256,10 @@
 				CALL ESC_CHAR_COLORED
 				INC BX
 				LOOP PM_LOOP2
-			CALL NOVALINHA 
 			POP CX							; desempilha CX quando acaba as colunas
 			INC CX
+			POP AX
+			INC AH							;incrementa linha(AH)
 			CMP CX, TAM_MATRIZ
 			JNZ PM_LOOP1			
 			
@@ -530,10 +566,33 @@
 	
 	TELA_JOGO PROC
 		PUSH BX
+		PUSH DX
+		PUSH AX
 		
+		CALL GET_CURSOR 					;pega a posicao do cursor 
+		
+		MOV AH, DH
+		SUB AH, TAM_MATRIZ					; coloca o cursor pra cima
+		SUB AH, 2H							; - 2 pra subir a linha inicial e o enter final
+		MOV AL, 00H							; posicao inicial 0
+		MOV BX, OFFSET MATRIZ_JOGADOR
+		CALL PRINT_MATRIZ
+		
+		CALL GET_CURSOR
+		
+		SUB DH, TAM_MATRIZ					; coloca o cursor pra cima
+		INC DL								; espaco entre matrizes
+		; SUB DH, 2H							; - 2 pra subir a linha inicial e o enter final
+		; ADD DL, TAM_MATRIZ					; + 3 * TAM_MATRIZ pq cada coluna da matriz tem 3 caracteres
+		; ADD DL, TAM_MATRIZ
+		; ADD DL, TAM_MATRIZ
+	
+		MOV AX, DX
 		MOV BX, OFFSET MATRIZ_TIROS
 		CALL PRINT_MATRIZ
 		
+		POP AX
+		POP DX
 		POP BX
 		RET
 	ENDP
@@ -542,8 +601,8 @@
 		MOV AX, @DATA
 		MOV DS, AX
 		
-		CALL CLEAR
-		CALL TELA_INICIAL
+		; CALL CLEAR
+		; CALL TELA_INICIAL
 		
 		CALL CLEAR
 		CALL TELA_JOGO
