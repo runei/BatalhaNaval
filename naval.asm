@@ -405,9 +405,9 @@
         XOR AX, AX
         
         LOOP_POSICAO_OCUPADA_VER:
-            MOV AX, [BX]
+            MOV AL, [BX]
             
-            CMP AX, ' '
+            CMP AL, ' '
             JNZ POSICAO_OCUPADA_VER_INVALIDA
             
             ADD BX, 10
@@ -435,9 +435,9 @@
         XOR AX, AX
         
         LOOP_POSICAO_OCUPADA_HOR:
-            MOV AX, [BX]
+            MOV AL, [BX]
             
-            CMP AX, ' '
+            CMP AL, ' '
             JNZ POSICAO_OCUPADA_HOR_INVALIDA
             
             INC BX
@@ -466,6 +466,11 @@
     	PUSH CX	 
     	PUSH BX
     
+		MOV BX, OFFSET VET_TAM_BARCOS		; pega o tamanho do barco
+		ADD BX, CX
+		XOR CX, CX
+		MOV CL, [BX]
+	
     	XOR DH, DH
     	MOV DH, 10
     	
@@ -481,7 +486,8 @@
     	JZ VER_POS_HOR
     	; verificar se tem alguma coisa nas posicoes
     	POP AX ; recupera AX original
-        POP BX ; recupera BX original para a funcao                       
+        POP BX ; recupera BX original para a funcao
+		PUSH BX		
         PUSH AX ; joga AX original pra pilha denovo
             
     	CALL VER_POSICAO_OCUPADA_VER ;
@@ -497,6 +503,7 @@
     	MUL DH
     	MOV CX, AX
     	POP AX ; recupera posicao original
+		PUSH AX
     	ADD AX, CX 
     	MOV BL, BH
     	XOR BH, BH
@@ -508,7 +515,8 @@
     	VER_POS_HOR:
     	    ; verificar se tem alguma coisa nas posicoes
             POP AX ; recupera AX original
-            POP BX ; recupera BX original para a funcao                       
+            POP BX ; recupera BX original para a funcao  
+			PUSH BX
             PUSH AX ; joga AX original pra pilha denovo
             
             CALL VER_POSICAO_OCUPADA_HOR ; 
@@ -661,6 +669,7 @@
 	TELA_INICIAL PROC					; mostra a tela inicial do jogo
 		PUSH BX
 		PUSH CX	
+		PUSH AX
 			
 		CALL ATUALIZA_TELA_INI
 		
@@ -674,6 +683,7 @@
 			POP CX
 			LOOP TI_LOOP
 		
+		POP AX
 		POP CX
 		POP BX
 		RET
