@@ -398,12 +398,12 @@
 		RET
 	ENDP
                            
-    VER_POSICAO_OCUPADA_VER PROC ; BX , posicao matriz + posicao digitada , CX , tamanho do barco - 1
+    VER_POSICAO_OCUPADA_VER PROC ; BX , posicao matriz + posicao digitada , CX , tamanho do barco
         PUSH CX
         PUSH BX
         
         XOR AX, AX
-        
+
         LOOP_POSICAO_OCUPADA_VER:
             MOV AL, [BX]
             
@@ -428,12 +428,12 @@
         RET
     ENDP
                            
-    VER_POSICAO_OCUPADA_HOR PROC ; BX , posicao matriz + posicao digitada , CX , tamanho do barco - 1
+    VER_POSICAO_OCUPADA_HOR PROC ; BX , posicao matriz + posicao digitada , CX , tamanho do barco
         PUSH CX
         PUSH BX
         
         XOR AX, AX
-        
+
         LOOP_POSICAO_OCUPADA_HOR:
             MOV AL, [BX]
             
@@ -441,8 +441,7 @@
             JNZ POSICAO_OCUPADA_HOR_INVALIDA
             
             INC BX
-        LOOP LOOP_POSICAO_OCUPADA_HOR
-        
+        LOOPNZ LOOP_POSICAO_OCUPADA_HOR
         
         ; POSICAO_OCUPADA_HOR_VALIDA:
         MOV AX, 1
@@ -476,41 +475,41 @@
     	
     	PUSH AX ; salva posicao original
     
-    	DIV DH ; AL , linha, AH , coluna
-    	
-    	MOV BX, AX ; BL , linha, BH, coluna
-    	
-    	DEC CX
-    	
     	CMP DL, CHR_HORIZONTAL
     	JZ VER_POS_HOR
-    	; verificar se tem alguma coisa nas posicoes
-    	POP AX ; recupera AX original
-        POP BX ; recupera BX original para a funcao
-		PUSH BX		
-        PUSH AX ; joga AX original pra pilha denovo
-            
-    	CALL VER_POSICAO_OCUPADA_VER ;
-    	                             ; retorna AX, 1 , valida, 0 , invalida
-    	CMP AX, 0
-        JZ POSICAO_INVALIDA
-            
-    	; verificar se eh uma posicao valida
-    	; vertical , soma tamanho - 1 * 10 na posicao
-    	; tem que ser menor que 90 + coluna
-    	XOR AX, AX
-    	MOV AX, CX
-    	MUL DH
-    	MOV CX, AX
-    	POP AX ; recupera posicao original
-		PUSH AX
-    	ADD AX, CX 
-    	MOV BL, BH
-    	XOR BH, BH
-    	ADD BL, 90
-    	CMP AX, BX
-    	JLE POSICAO_VALIDA
-    	JMP POSICAO_INVALIDA
+		;VER_POS_VER:
+			; verificar se tem alguma coisa nas posicoes
+			POP AX ; recupera AX original
+			POP BX ; recupera BX original para a funcao
+			PUSH BX		
+			PUSH AX ; joga AX original pra pilha denovo
+				
+			CALL VER_POSICAO_OCUPADA_VER ;
+										 ; retorna AX, 1 , valida, 0 , invalida
+
+			CMP AX, 0
+			JZ POSICAO_INVALIDA_OCUPADA
+				
+			; verificar se eh uma posicao valida
+			; vertical , soma tamanho - 1 * 10 na posicao
+			; tem que ser menor que 90 + coluna
+			DEC CX
+			XOR AX, AX
+			MOV AX, CX
+			MUL DH
+			MOV CX, AX
+			POP AX ; recupera posicao original
+			PUSH AX
+			DIV DH ; AL , linha, AH , coluna
+			MOV BX, AX ; BL , linha, BH, coluna
+			POP AX
+			ADD AX, CX 
+			MOV BL, BH
+			XOR BH, BH
+			ADD BL, 90
+			CMP AX, BX
+			JLE POSICAO_VALIDA
+			JMP POSICAO_INVALIDA
     	
     	VER_POS_HOR:
     	    ; verificar se tem alguma coisa nas posicoes
@@ -519,15 +518,20 @@
 			PUSH BX
             PUSH AX ; joga AX original pra pilha denovo
             
-            CALL VER_POSICAO_OCUPADA_HOR ; 
+			CALL VER_POSICAO_OCUPADA_HOR ; 
                                          ; retorna AX, 1 , valida , 0 , invalida
             
             CMP AX, 0
-            JZ POSICAO_INVALIDA
+            JZ POSICAO_INVALIDA_OCUPADA
             
             ; verificar se eh uma posicao valida
 			; horizontal , soma tamanho - 1 na posicao 
 			; tem que ser menor que linha * 10 + 9
+			DEC CX
+			POP AX
+			PUSH AX
+			DIV DH ; AL , linha, AH , coluna
+			MOV BX, AX ; BL , linha, BH, coluna
 			
 			XOR AX, AX
 			XOR BH, BH
@@ -548,6 +552,9 @@
 			MOV AX, 1
 			JMP FIM_VER_POSICAO
     	
+		POSICAO_INVALIDA_OCUPADA:
+			POP AX
+		
     	POSICAO_INVALIDA:
 			MOV AX, 0    
     	
@@ -555,7 +562,7 @@
     		
 			POP BX
 			POP CX
-			POP DX    
+			POP DX
     	
     	RET
     ENDP
@@ -586,7 +593,7 @@
 			CALL LER_DIRECAO_BARCO			; le a direcao do barco (somente H ou V)
 			
 			CALL VER_POS_VALIDA             ; recebe DL, direcao, CX, tamanho barco , AX, posicao , BX , matriz + posicao
-											; retorna em AX, 1 valido, 0 invalido
+					 						 ; retorna em AX, 1 valido, 0 invalido
 			CMP AX, 1
 			JZ  CONT_COLOCA_BARCO
 			
