@@ -73,6 +73,7 @@
 	MATRIZ_TIROS DB 100 DUP (QUADRADO) ; quadrado
 	MATRIZ_TIROS_COR DB 100 DUP (COR_VERDE) ; 02H = verde
 	
+	ULT_TIRO DB ESPACO, ESPACO
 	QTDE_AFUND DB 0
 	QTDE_TIROS DB 0
 	QTDE_ACERTO DB 0
@@ -724,6 +725,7 @@
 		PUSH BX
 		PUSH CX
 		
+		
 		ADD AL, CS_COL_BASIC_INFO
 		
 		CALL NOVALINHA_CURSOR
@@ -732,8 +734,9 @@
 		CALL PRINTFS
 		
 		MOV CX, AX ; salva ax
+		XOR AX, AX
 		MOV BX, OFFSET QTDE_TIROS
-		MOV AX, [BX]
+		MOV AL, [BX]
 		CALL ESC_UINT16
 
 		MOV AX, CX
@@ -744,8 +747,9 @@
 		CALL PRINTFS
 		
 		MOV CX, AX ; salva ax
+		XOR AX, AX
 		MOV BX, OFFSET QTDE_ACERTO
-		MOV AX, [BX]
+		MOV AL, [BX]
 		CALL ESC_UINT16
 		MOV AX, CX
 		
@@ -755,8 +759,9 @@
 		CALL PRINTFS
 		
 		MOV CX, AX ; salva ax
+		XOR AX, AX
 		MOV BX, OFFSET QTDE_AFUND
-		MOV AX, [BX]
+		MOV AL, [BX]
 		CALL ESC_UINT16
 		MOV AX, CX
 		
@@ -766,6 +771,22 @@
 		POP CX
 		POP BX
 		POP DX
+		RET
+	ENDP
+	
+	PRINT_ULT_TIRO PROC
+		PUSH BX
+		PUSH DX
+		
+		MOV BX, OFFSET ULT_TIRO
+		MOV DL, [BX]
+		CALL ESC_CHAR
+		INC BX
+		MOV DL, [BX]
+		CALL ESC_CHAR
+				
+		POP DX
+		POP BX
 		RET
 	ENDP
 	
@@ -798,6 +819,8 @@
 		CALL SET_CURSOR
 		MOV DX, OFFSET STR_ULTIMO_TIRO
 		CALL PRINTFS
+		CALL PRINT_ULT_TIRO
+		
 		SUB AL, CS_COL_BASIC_INFO
 		CALL NOVALINHA_CURSOR
 		
@@ -841,19 +864,20 @@
 		PUSH AX
 		PUSH BX
 		
-		MOV AX, [BX]						;move para AX valor do navio acertado
+		XOR AX, AX
+		
+		MOV AL, [BX]						;move para AX valor do navio acertado
 		MOV BX, OFFSET VET_SIMB_BARCOS		; move de simbolos
 		MOV CX, TAM_VET_NAVIOS				; move para ultima posicao do vetor
-		ADD BX, CX
 		VA_LOOP:
-			CMP WORD PTR [BX], AX			; compara simbolo com a posicao acertada
+			CMP BYTE PTR [BX], AL			; compara simbolo com a posicao acertada
 			JZ VA_FIM_LOOP
-			DEC BX
+			INC BX
 			LOOP VA_LOOP
 			
 		VA_FIM_LOOP:
-			MOV BX, OFFSET VET_TAM_BARCOS_AFUNDADOS	; pega o vetor dos afundados e diminui um tiro
-			ADD BX, CX
+			SUB BX, OFFSET VET_SIMB_BARCOS		
+			ADD BX, OFFSET VET_TAM_BARCOS_AFUNDADOS	; pega o vetor dos afundados e diminui um tiro
 			DEC BYTE PTR [BX]
 			CMP BYTE PTR [BX], 0
 			JZ VA_SOMAR_AFUNDADO
@@ -920,18 +944,57 @@
 		
 		AMT_ACERTOU:
 			MOV BYTE PTR [BX], 'o'
+			MOV BX, OFFSET QTDE_ACERTO
+			INC BYTE PTR [BX]
 		
 		AMT_FIM:
 			POP BX
 		RET
 	ENDP
 	
+	GET_POSICAO_TIRO PROC	;retorna em AX a posicao na matriz que o barco será inserido
+		PUSH DX
+		PUSH BX
+		PUSH CX
+		
+		XOR AX, AX
+		XOR DX, DX
+		MOV BX, OFFSET ULT_TIRO
+		
+		CALL LER_DIGITO			; le a linha
+		MOV CL, AL
+		
+		MOV BYTE PTR [BX], AL	; grava ultimo tiro
+		ADD BYTE PTR [BX], '0'
+		INC BX
+		
+		CALL LER_DIGITO			; le a coluna
+		MOV DL, AL
+		MOV BYTE PTR [BX], AL	; grava ultimo tiro
+		ADD BYTE PTR [BX], '0'
+		
+		MOV AL, TAM_MATRIZ
+		MUL CL					; resultado = (tamanho da linha da matriz * nro da linha) + nro da coluna
+		ADD AX, DX				; AL = (TAM_MATRIZ * CL) + DL
+		
+		POP CX
+		POP BX
+		POP DX
+		RET
+	ENDP
+	
 	ATIRAR PROC
 		PUSH AX
 		PUSH DX
-		CALL GET_POSICAO_INI_BARCO
+		PUSH BX
+		
+		CALL GET_POSICAO_TIRO		
 		CALL ATIRA_MATRIZ_NAVIOS 
 		CALL ATIRA_MATRIZ_TIRO 
+		MOV BX, OFFSET QTDE_TIROS
+		INC BYTE PTR [BX]
+		
+		POP BX
 		POP DX
 		POP AX
 		RET
@@ -942,44 +1005,45 @@
 		PUSH DX
 		PUSH AX
 		
-		MOV CX, 3
-		XX_LACO:
+		TJ_LACO:
 		
-		CALL GET_CURSOR 					;pega a posicao do cursor 
+			CALL GET_CURSOR 					;pega a posicao do cursor 
+			
+			MOV AH, CS_LINHA_INI				
+			MOV AL, 00H							; posicao inicial 0
+			MOV BX, OFFSET MATRIZ_JOGADOR
+			CALL PRINT_MATRIZ
+			
+			CALL GET_CURSOR
+			
+			MOV DH, CS_LINHA_INI					; coloca o cursor pra cima
+			CALL PRINT_DIVISOR						; espaco entre matrizes
 		
-		MOV AH, CS_LINHA_INI				
-		MOV AL, 00H							; posicao inicial 0
-		MOV BX, OFFSET MATRIZ_JOGADOR
-		CALL PRINT_MATRIZ
-		
-		CALL GET_CURSOR
-		
-		MOV DH, CS_LINHA_INI					; coloca o cursor pra cima
-		CALL PRINT_DIVISOR						; espaco entre matrizes
-	
-		MOV AX, DX
-		MOV BX, OFFSET MATRIZ_TIROS
-		CALL PRINT_MATRIZ
-		
-		CALL GET_CURSOR
-		
-		MOV DH, CS_LINHA_INI					; coloca o cursor pra cima
-		CALL PRINT_DIVISOR	
-		
-		MOV DH, CS_LINHA_INI					; coloca o cursor pra cima
-		INC DL	
-		CALL PRINT_PLACARES
-		
-		CALL NOVALINHA
-		CALL NOVALINHA
-		
-		MOV DX, OFFSET STR_POSICAO
-		CALL PRINTFS
-		
-		CALL ATIRAR
-		CALL CLEAR
-		
-		LOOP XX_LACO
+			MOV AX, DX
+			MOV BX, OFFSET MATRIZ_TIROS
+			CALL PRINT_MATRIZ
+			
+			CALL GET_CURSOR
+			
+			MOV DH, CS_LINHA_INI					; coloca o cursor pra cima
+			CALL PRINT_DIVISOR	
+			
+			MOV DH, CS_LINHA_INI					; coloca o cursor pra cima
+			INC DL	
+			CALL PRINT_PLACARES
+			
+			CALL NOVALINHA
+			CALL NOVALINHA
+			
+			MOV DX, OFFSET STR_POSICAO
+			CALL PRINTFS
+			
+			CALL ATIRAR
+			CALL CLEAR
+			
+			MOV BX, OFFSET QTDE_AFUND
+			CMP BYTE PTR [BX], 2
+			JNZ TJ_LACO
 		
 		POP AX
 		POP DX
